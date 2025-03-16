@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
     if (req.session.loggedin) {
         res.send('Welcome back, ' + req.session.username + '!');
     } else {
-        res.sendFile(path.join(__dirname, 'login.html'));
+        res.sendFile(path.join(__dirname, 'register.html'));
     }
 });
 
