@@ -33,22 +33,43 @@ app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'register.html'));
 });
 
+// تحديث معالجة أخطاء التسجيل
 app.post('/register', async (req, res, next) => {
     try {
         const { username, password, email } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
         
+        // التحقق من البيانات
+        if (!username || !password || !email) {
+            return res.status(400).send('جميع الحقول مطلوبة');
+        }
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
         const sql = "INSERT INTO users (username, password, email) VALUES (?, ?, ?)";
-        await db.execute(sql, [username, hashedPassword, email]);
-        res.send('Registration successful! Please <a href="/">login</a>');
+        
+        try {
+            await db.execute(sql, [username, hashedPassword, email]);
+            res.send('تم التسجيل بنجاح! <a href="/">اضغط هنا لتسجيل الدخول</a>');
+        } catch (dbError) {
+            if (dbError.code === 'ER_DUP_ENTRY') {
+                res.status(400).send('اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل');
+            } else {
+                throw dbError;
+            }
+        }
     } catch (error) {
         next(error);
     }
 });
 
+// تحسين رسائل خطأ تسجيل الدخول
 app.post('/login', async (req, res, next) => {
     try {
         const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).send('يرجى إدخال اسم المستخدم وكلمة المرور');
+        }
+
         const sql = "SELECT * FROM users WHERE username = ?";
         const [rows] = await db.execute(sql, [username]);
         
@@ -75,15 +96,26 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Add error handling middleware after all other middleware and routes
+// تحديث middleware معالجة الأخطاء
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).send('Something broke! Please try again later.');
+    
+    // معالجة أخطاء محددة
+    if (err.code === 'ECONNREFUSED') {
+        return res.status(503).send('خطأ في الاتصال بقاعدة البيانات. الرجاء المحاولة لاحقاً');
+    }
+    
+    if (err instanceof SyntaxError) {
+        return res.status(400).send('خطأ في تنسيق البيانات المرسلة');
+    }
+    
+    // رسالة خطأ عامة
+    res.status(500).send('حدث خطأ في النظام. الرجاء المحاولة مرة أخرى');
 });
 
-// Improve database connection error handling
+// تحسين معالجة الأخطاء غير المتوقعة
 process.on('unhandledRejection', (error) => {
-    console.error('Unhandled promise rejection:', error);
+    console.error('خطأ غير معالج:', error);
 });
 
 const PORT = 3000;
