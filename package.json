@@ -9,7 +9,6 @@
     "mysql2": "^2.3.3",
     "bcryptjs": "^2.4.3",
     "express-session": "^1.17.3",
-    "dotenv": "^16.0.3",
     "@vercel/node": "^2.15.1"
   },
   "scripts": {
